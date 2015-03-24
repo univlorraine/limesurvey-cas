@@ -16,5 +16,5 @@ It also allows you to optionnally create users after the first authentication us
          ),
          ```
 3. Make sure that one of your admin account has the same id as your CAS account to still be able to manage your installation after the plugin activation
-4. Go to "plugins" in the admin interface of LimeSurvey. Configure the plugin. If you choose to auto-create users, you can add a filter to determine who can create his account.
-5. When you're done, click on activate. Once done, it won't be possible to authenticate by another mecanism.
+4. Go to "plugins" in the admin interface of LimeSurvey. Configure the plugin. If you choose to auto-create users, you can add a filter to determine who has the right to connect without a previously created account.
+5. When you're done, click on activate. Once done, it won't be possible to authenticate by another mechanism.
