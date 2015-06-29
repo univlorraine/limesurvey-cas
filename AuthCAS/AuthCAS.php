@@ -22,12 +22,33 @@ class AuthCAS extends AuthPluginBase
             'label' => 'Relative uri from CAS Server to cas workingdirectory',
             'default' => '/cas',
         ),
+        'casVersion' => array(
+            'type' => 'select',
+            'label' => 'protocol version',
+            'options' => array("1.0" => "CAS_VERSION_1_0", "2.0" => "CAS_VERSION_2_0", "3.0" => "CAS_VERSION_3_0", "S1" => "SAML_VERSION_1_1"),
+            'default' => "2.0",
+        ),
         'autoCreate' => array(
             'type' => 'select',
-            'label' => 'Enable automated creation of user from LDAP ?',
-            'options' => array("0" => "No, don't create user automatically", "1" => "User creation on the first connection"),
+            'label' => 'Enable automated creation of user ?',
+            'options' => array("0" => "No, don't create user automatically", "1" => "User creation on the first connection", "2" => "User creation from CAS attributes"),
             'default' => '0',
             'submitonchange' => true
+        ),
+        'casLoginAttr' => array(
+            'type' => 'string',
+            'label' => 'CAS attribute for login',
+            'default' => 'uid'
+        ),
+        'casFullnameAttr' => array(
+            'type' => 'string',
+            'label' => 'CAS attribute for fullname',
+            'default' => 'displayName'
+        ),
+        'casMailAttr' => array(
+            'type' => 'string',
+            'label' => 'CAS attribute for mail',
+            'default' => 'mail'
         ),
         'server' => array(
             'type' => 'string',
@@ -95,7 +116,7 @@ class AuthCAS extends AuthPluginBase
      * @param boolean $getValues
      * @return array
      */
-    public function getPluginSettings($getValues = true) 
+    public function getPluginSettings($getValues = true)
     {
         $aPluginSettings = parent::getPluginSettings($getValues);
         if ($getValues) 
@@ -113,7 +134,7 @@ class AuthCAS extends AuthPluginBase
                 $aPluginSettings['autoCreate']['current'] = $autoCreate;
             }
 
-            if ($autoCreate == 0) 
+            if ($autoCreate != 1)
             {
                 // Don't create user. Hide unneeded ldap settings
                 unset($aPluginSettings['server']);
@@ -126,12 +147,17 @@ class AuthCAS extends AuthPluginBase
                 unset($aPluginSettings['extrauserfilter']);
                 unset($aPluginSettings['binddn']);
                 unset($aPluginSettings['bindpwd']);
-            } else 
-            {
-                if ($ldapver == '2') 
+            } else {
+                if ($ldapver == '2')
                 {
                     unset($aPluginSettings['ldaptls']);
                 }
+            }
+            if ($autoCreate != 2)
+            {
+                unset($aPluginSettings['casFullnameAttr']);
+                unset($aPluginSettings['casLoginAttr']);
+                unset($aPluginSettings['casMailAttr']);
             }
         }
 
@@ -144,14 +170,14 @@ class AuthCAS extends AuthPluginBase
         $cas_host = $this->get('casAuthServer');
         $cas_context = $this->get('casAuthUri');
         $cas_port = (int) $this->get('casAuthPort');
-
+        $cas_version = $this->get('casVersion');
         // import phpCAS lib
         $basedir=dirname(__FILE__); 
         Yii::setPathOfAlias('myplugin', $basedir);
         Yii::import('myplugin.third_party.CAS.*');
         require_once('CAS.php');
         // Initialize phpCAS
-        phpCAS::client(CAS_VERSION_2_0, $cas_host, $cas_port, $cas_context, false);
+        phpCAS::client($cas_version, $cas_host, $cas_port, $cas_context, false);
         // disable SSL validation of the CAS server
         phpCAS::setNoCasServerValidation();
         //force CAS authentication
@@ -159,7 +185,7 @@ class AuthCAS extends AuthPluginBase
 
         $this->setUsername(phpCAS::getUser());
         $oUser = $this->api->getUserByName($this->getUserName());
-        if ($oUser || $this->get('autoCreate')) 
+        if ($oUser || ((int) $this->get('autoCreate') > 0) ) 
         {
             // User authenticated and found. Cas become the authentication system
             $this->getEvent()->set('default', get_class($this));
@@ -185,9 +211,9 @@ class AuthCAS extends AuthPluginBase
         $oUser = $this->api->getUserByName($sUser);
         if (is_null($oUser)) 
         {
-            if ((boolean) $this->get('autoCreate') === true) 
+            if ((int) $this->get('autoCreate') === 1) 
             {
-                // auto-create
+                // auto-create from LDAP
                 // Get configuration settings:
                 $ldapserver = $this->get('server');
                 $ldapport = $this->get('ldapport');
@@ -302,6 +328,52 @@ class AuthCAS extends AuthPluginBase
                     throw new CHttpException(401, 'No authorized user found for login "' . $username . '"');
                     return;
                 }
+            } elseif ((int) $this->get('autoCreate') === 2)
+            {
+                try {
+                    // import phpCAS lib
+                    $basedir=dirname(__FILE__); 
+                    Yii::setPathOfAlias('myplugin', $basedir);
+                    Yii::import('myplugin.third_party.CAS.*');
+                    require_once('CAS.php');
+                    $cas_host = $this->get('casAuthServer');
+                    $cas_context = $this->get('casAuthUri');
+                    $cas_version = $this->get('casVersion');
+                    $cas_port = (int) $this->get('casAuthPort');
+                    // Initialize phpCAS
+                    //phpCAS::client($cas_version, $cas_host, $cas_port, $cas_context, false);
+                    // disable SSL validation of the CAS server
+                    //phpCAS::setNoCasServerValidation();
+                    $cas_fullname = phpCAS::getAttribute($this->get('casFullnameAttr'));
+                    $cas_login = phpCAS::getAttribute($this->get('casLoginAttr'));
+                    $cas_mail = phpCAS::getAttribute($this->get('casMailAttr'));
+                } catch (Exception $e)
+                {
+                    $this->setAuthFailure(self::ERROR_USERNAME_INVALID);
+                    throw new CHttpException(401, 'Cas attributes not found for "' . $username . '"');
+                    return;
+                }
+                $oUser = new User;
+                $oUser->users_name = phpCAS::getUser();
+                $oUser->password = hash('sha256', createPassword());
+                $oUser->full_name = $cas_fullname;
+                $oUser->parent_id = 1;
+                $oUser->email = $cas_mail;
+                if ($oUser->save())
+                {
+                    if ($this->api->getConfigKey('auth_cas_autocreate_permissions'))
+                    {
+                        $permission = new Permission;
+                        $permission->setPermissions($oUser->uid, 0, 'global', $this->api->getConfigKey('auth_cas_autocreate_permissions'), true);
+                    }
+                    $this->setAuthSuccess($oUser);
+                    return;
+                } else
+                {
+                    $this->setAuthFailure(self::ERROR_USERNAME_INVALID);
+                    throw new CHttpException(401, 'User not saved : ' . $sUser .' / ' . $cas_mail . ' / ' . $cas_fullname);
+                    return;
+                }
             }
         } else 
         {
@@ -315,6 +387,7 @@ class AuthCAS extends AuthPluginBase
         // configure phpCAS
         $cas_host = $this->get('casAuthServer');
         $cas_context = $this->get('casAuthUri');
+        $cas_version = $this->get('casVersion');
         $cas_port = (int) $this->get('casAuthPort');
         // import phpCAS lib
         $basedir=dirname(__FILE__); 
@@ -322,7 +395,7 @@ class AuthCAS extends AuthPluginBase
         Yii::import('myplugin.third_party.CAS.*');
         require_once('CAS.php');
         // Initialize phpCAS
-        phpCAS::client(CAS_VERSION_2_0, $cas_host, $cas_port, $cas_context, false);
+        phpCAS::client($cas_version, $cas_host, $cas_port, $cas_context, false);
         // disable SSL validation of the CAS server
         phpCAS::setNoCasServerValidation();
         // logout from CAS
