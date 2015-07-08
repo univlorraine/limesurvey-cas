@@ -166,6 +166,10 @@ class AuthCAS extends AuthPluginBase
 
     public function beforeLogin() 
     {
+			if (!is_null($this->api->getRequest()->getParam('noAuthCAS')) || ($this->api->getRequest()->getIsPostRequest())) {
+				# Local authentication forced through 'noAuthCAS' url parameter
+        $this->getEvent()->set('default', "Authdb");
+      } else {
         // configure phpCAS
         $cas_host = $this->get('casAuthServer');
         $cas_context = $this->get('casAuthUri');
@@ -195,6 +199,7 @@ class AuthCAS extends AuthPluginBase
             // Fall back to another authentication mecanism
             throw new CHttpException(401, 'Wrong credentials for LimeSurvey administration.');
         }
+			}
     }
 
     public function newUserSession() 
