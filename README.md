@@ -21,6 +21,5 @@ After upgrading AuthCAS.php, modify your plugin parameters and then activate CAS
                  'surveys' => array('create'=>true)
          ),
          ```
-3. Make sure that one of your admin account has the same id as your CAS account to still be able to manage your installation after the plugin activation
-4. Go to "plugins" in the admin interface of LimeSurvey. Configure the plugin. If you choose to auto-create users, you can add a filter to determine who has the right to connect without a previously created account.
-5. When you're done, click on activate. Once done, it won't be possible to authenticate by another mechanism.
+3. Go to "plugins" in the admin interface of LimeSurvey. Configure the plugin. If you choose to auto-create users, you can add a filter to determine who has the right to connect without a previously created account.
+4. When you're done, click on activate. Once done, it won't be possible to authenticate by another mechanism unless you use the specific url ls_url/index.php/admin/authentication/sa/login?noAuthCAS=true.
