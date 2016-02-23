@@ -314,6 +314,20 @@ class AuthCAS extends AuthPluginBase
                            $permission = new Permission;
                            $permission->setPermissions($oUser->uid, 0, 'global', $this->api->getConfigKey('auth_cas_autocreate_permissions'), true);
                         }
+                        if ($this->api->getConfigKey('auth_cas_template_list'))
+                        {
+                           // Add permission on the templates defined in the config file
+                           foreach ($this->api->getConfigKey('auth_cas_template_list') as $template)
+                           {
+                              $oPermission=new Permission;
+                              $oPermission->uid = $oUser->uid;
+                              $oPermission->entity = 'template';
+                              $oPermission->permission = trim($template);
+                              $oPermission->read_p = 1;
+                              $oPermission->save();
+                           }
+                        }
+
                         // read again user from newly created entry
                         $this->setAuthSuccess($oUser);
                         return;
