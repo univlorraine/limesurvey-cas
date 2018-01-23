@@ -19,26 +19,28 @@
  *
  * PHP Version 5
  *
- * @file     CAS/Language/Japanese.php
+ * @file     CAS/Language/Greek.php
  * @category Authentication
  * @package  PhpCAS
- * @author   fnorif <fnorif@yahoo.co.jp>
+ * @author   Vangelis Haniotakis <haniotak@ucnet.uoc.gr>
  * @license  http://www.apache.org/licenses/LICENSE-2.0  Apache License 2.0
  * @link     https://wiki.jasig.org/display/CASC/phpCAS
  */
 
 /**
- * Japanese language class. Now Encoding is EUC-JP and LF
+ * Greek language class
  *
- * @class    CAS_Languages_Japanese
+ * @class    CAS_Languages_Greek
  * @category Authentication
  * @package  PhpCAS
- * @author   fnorif <fnorif@yahoo.co.jp>
+ * @author   Vangelis Haniotakis <haniotak@ucnet.uoc.gr>
  * @license  http://www.apache.org/licenses/LICENSE-2.0  Apache License 2.0
  * @link     https://wiki.jasig.org/display/CASC/phpCAS
  *
- **/
-class CAS_Languages_Japanese implements CAS_Languages_LanguageInterface
+ * @sa @link internalLang Internationalization @endlink
+ * @ingroup internalLang
+ */
+class CAS_Languages_Greek implements CAS_Languages_LanguageInterface
 {
     /**
      * Get the using server string
@@ -47,7 +49,7 @@ class CAS_Languages_Japanese implements CAS_Languages_LanguageInterface
      */
     public function getUsingServer()
     {
-        return 'using server';
+        return 'χρησιμοποιείται ο εξυπηρετητής';
     }
 
     /**
@@ -57,7 +59,7 @@ class CAS_Languages_Japanese implements CAS_Languages_LanguageInterface
      */
     public function getAuthenticationWanted()
     {
-        return 'CAS�ˤ��ǧ�ڤ�Ԥ��ޤ�';
+        return 'Απαιτείται η ταυτοποίηση CAS!';
     }
 
     /**
@@ -67,7 +69,7 @@ class CAS_Languages_Japanese implements CAS_Languages_LanguageInterface
      */
     public function getLogout()
     {
-        return 'CAS����?�����Ȥ��ޤ�!';
+        return 'Απαιτείται η αποσύνδεση από CAS!';
     }
 
     /**
@@ -77,7 +79,7 @@ class CAS_Languages_Japanese implements CAS_Languages_LanguageInterface
      */
     public function getShouldHaveBeenRedirected()
     {
-        return 'CAS�����Ф˹Ԥ�ɬ�פ�����ޤ�����ưŪ��ž������ʤ����� <a href="%s">������</a> �򥯥�å�����³�Ԥ��ޤ��';
+        return 'Θα έπρεπε να είχατε ανακατευθυνθεί στον εξυπηρετητή CAS. Κάντε κλίκ <a href="%s">εδώ</a> για να συνεχίσετε.';
     }
 
     /**
@@ -87,7 +89,7 @@ class CAS_Languages_Japanese implements CAS_Languages_LanguageInterface
      */
     public function getAuthenticationFailed()
     {
-        return 'CAS�ˤ��ǧ�ڤ˼��Ԥ��ޤ���';
+        return 'Η ταυτοποίηση CAS απέτυχε!';
     }
 
     /**
@@ -97,7 +99,7 @@ class CAS_Languages_Japanese implements CAS_Languages_LanguageInterface
      */
     public function getYouWereNotAuthenticated()
     {
-        return '<p>ǧ�ڤǤ��ޤ���Ǥ���.</p><p>�⤦���٥ꥯ�����Ȥ������������<a href="%s">������</a>�򥯥�å�.</p><p>���꤬��褷�ʤ����� <a href="mailto:%s">���Υ����Ȥδ����</a>���䤤��碌�Ƥ�������.</p>';
+        return '<p>Δεν ταυτοποιηθήκατε.</p><p>Μπορείτε να ξαναπροσπαθήσετε, κάνοντας κλίκ <a href="%s">εδώ</a>.</p><p>Εαν το πρόβλημα επιμείνει, ελάτε σε επαφή με τον <a href="mailto:%s">διαχειριστή</a>.</p>';
     }
 
     /**
@@ -107,7 +109,7 @@ class CAS_Languages_Japanese implements CAS_Languages_LanguageInterface
      */
     public function getServiceUnavailable()
     {
-        return '�����ӥ� `<b>%s</b>\' �����ѤǤ��ޤ��� (<b>%s</b>).';
+        return 'Η υπηρεσία `<b>%s</b>\' δεν είναι διαθέσιμη (<b>%s</b>).';
     }
 }
 ?>

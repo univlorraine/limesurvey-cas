@@ -19,28 +19,26 @@
  *
  * PHP Version 5
  *
- * @file     CAS/Language/Greek.php
+ * @file     CAS/Language/Japanese.php
  * @category Authentication
  * @package  PhpCAS
- * @author   Vangelis Haniotakis <haniotak@ucnet.uoc.gr>
+ * @author   fnorif <fnorif@yahoo.co.jp>
  * @license  http://www.apache.org/licenses/LICENSE-2.0  Apache License 2.0
  * @link     https://wiki.jasig.org/display/CASC/phpCAS
  */
 
 /**
- * Greek language class
+ * Japanese language class. Now Encoding is UTF-8.
  *
- * @class    CAS_Languages_Greek
+ * @class    CAS_Languages_Japanese
  * @category Authentication
  * @package  PhpCAS
- * @author   Vangelis Haniotakis <haniotak@ucnet.uoc.gr>
+ * @author   fnorif <fnorif@yahoo.co.jp>
  * @license  http://www.apache.org/licenses/LICENSE-2.0  Apache License 2.0
  * @link     https://wiki.jasig.org/display/CASC/phpCAS
  *
- * @sa @link internalLang Internationalization @endlink
- * @ingroup internalLang
- */
-class CAS_Languages_Greek implements CAS_Languages_LanguageInterface
+ **/
+class CAS_Languages_Japanese implements CAS_Languages_LanguageInterface
 {
     /**
      * Get the using server string
@@ -49,7 +47,7 @@ class CAS_Languages_Greek implements CAS_Languages_LanguageInterface
      */
     public function getUsingServer()
     {
-        return '÷ñçóéìïðïéåßôáé ï åîõðçñåôçôÞò';
+        return 'サーバーを使っています。';
     }
 
     /**
@@ -59,7 +57,7 @@ class CAS_Languages_Greek implements CAS_Languages_LanguageInterface
      */
     public function getAuthenticationWanted()
     {
-        return 'Áðáéôåßôáé ç ôáõôïðïßçóç CAS!';
+        return 'CASによる認証を行います。';
     }
 
     /**
@@ -69,7 +67,7 @@ class CAS_Languages_Greek implements CAS_Languages_LanguageInterface
      */
     public function getLogout()
     {
-        return 'Áðáéôåßôáé ç áðïóýíäåóç áðü CAS!';
+        return 'CASからログアウトします!';
     }
 
     /**
@@ -79,7 +77,7 @@ class CAS_Languages_Greek implements CAS_Languages_LanguageInterface
      */
     public function getShouldHaveBeenRedirected()
     {
-        return 'Èá Ýðñåðå íá åß÷áôå áíáêáôåõèõíèåß óôïí åîõðçñåôçôÞ CAS. ÊÜíôå êëßê <a href="%s">åäþ</a> ãéá íá óõíå÷ßóåôå.';
+        return 'CASサーバに行く必要があります。自動的に転送されない場合は <a href="%s">こちら</a> をクリックして続行します。';
     }
 
     /**
@@ -89,7 +87,7 @@ class CAS_Languages_Greek implements CAS_Languages_LanguageInterface
      */
     public function getAuthenticationFailed()
     {
-        return 'Ç ôáõôïðïßçóç CAS áðÝôõ÷å!';
+        return 'CASによる認証に失敗しました。';
     }
 
     /**
@@ -99,7 +97,7 @@ class CAS_Languages_Greek implements CAS_Languages_LanguageInterface
      */
     public function getYouWereNotAuthenticated()
     {
-        return '<p>Äåí ôáõôïðïéçèÞêáôå.</p><p>Ìðïñåßôå íá îáíáðñïóðáèÞóåôå, êÜíïíôáò êëßê <a href="%s">åäþ</a>.</p><p>Åáí ôï ðñüâëçìá åðéìåßíåé, åëÜôå óå åðáöÞ ìå ôïí <a href="mailto:%s">äéá÷åéñéóôÞ</a>.</p>';
+        return '<p>認証できませんでした。</p><p>もう一度リクエストを送信する場合は<a href="%s">こちら</a>をクリック。</p><p>問題が解決しない場合は <a href="mailto:%s">このサイトの管理者</a>に問い合わせてください。</p>';
     }
 
     /**
@@ -109,7 +107,7 @@ class CAS_Languages_Greek implements CAS_Languages_LanguageInterface
      */
     public function getServiceUnavailable()
     {
-        return 'Ç õðçñåóßá `<b>%s</b>\' äåí åßíáé äéáèÝóéìç (<b>%s</b>).';
+        return 'サービス `<b>%s</b>\' は利用できません (<b>%s</b>)。';
     }
 }
 ?>
