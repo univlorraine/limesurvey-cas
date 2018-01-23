@@ -1,6 +1,6 @@
 <?php
 
-class AuthCAS extends AuthPluginBase 
+class AuthCAS extends LimeSurvey\PluginManager\AuthPluginBase
 {
 
     protected $storage = 'DbStorage';
@@ -97,10 +97,8 @@ class AuthCAS extends AuthPluginBase
         )
     );
 
-    public function __construct(PluginManager $manager, $id) 
+    public function init()
     {
-        parent::__construct($manager, $id);
-
         /**
          * Here you should handle subscribing to the events your plugin will handle
          */
