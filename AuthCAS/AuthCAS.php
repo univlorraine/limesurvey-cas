@@ -1,6 +1,6 @@
 <?php
 
-class AuthCAS extends AuthPluginBase 
+class AuthCAS extends LimeSurvey\PluginManager\AuthPluginBase
 {
 
     protected $storage = 'DbStorage';
@@ -97,10 +97,8 @@ class AuthCAS extends AuthPluginBase
         )
     );
 
-    public function __construct(PluginManager $manager, $id) 
+    public function init()
     {
-        parent::__construct($manager, $id);
-
         /**
          * Here you should handle subscribing to the events your plugin will handle
          */
@@ -166,8 +164,8 @@ class AuthCAS extends AuthPluginBase
 
     public function beforeLogin() 
     {
-			if (!is_null($this->api->getRequest()->getParam('noAuthCAS')) || ($this->api->getRequest()->getIsPostRequest())) {
-				# Local authentication forced through 'noAuthCAS' url parameter
+      if (!is_null($this->api->getRequest()->getParam('noAuthCAS')) || ($this->api->getRequest()->getIsPostRequest())) {
+        # Local authentication forced through 'noAuthCAS' url parameter
         $this->getEvent()->set('default', "Authdb");
       } else {
         // configure phpCAS
@@ -198,7 +196,7 @@ class AuthCAS extends AuthPluginBase
             // Fall back to another authentication mecanism
             throw new CHttpException(401, 'Wrong credentials for LimeSurvey administration.');
         }
-			}
+      }
     }
 
     public function newUserSession() 
@@ -352,7 +350,7 @@ class AuthCAS extends AuthPluginBase
                     // import phpCAS lib
                     $basedir=dirname(__FILE__); 
                     Yii::setPathOfAlias('myplugin', $basedir);
-										Yii::import('myplugin.third_party.CAS.CAS',true);
+                    Yii::import('myplugin.third_party.CAS.CAS',true);
                     $cas_host = $this->get('casAuthServer');
                     $cas_context = $this->get('casAuthUri');
                     $cas_version = $this->get('casVersion');
@@ -409,7 +407,7 @@ class AuthCAS extends AuthPluginBase
         // import phpCAS lib
         $basedir=dirname(__FILE__); 
         Yii::setPathOfAlias('myplugin', $basedir);
-				Yii::import('myplugin.third_party.CAS.CAS',true);
+        Yii::import('myplugin.third_party.CAS.CAS',true);
         // Initialize phpCAS
         phpCAS::client($cas_version, $cas_host, $cas_port, $cas_context, false);
         // disable SSL validation of the CAS server
