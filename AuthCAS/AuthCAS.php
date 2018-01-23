@@ -164,8 +164,8 @@ class AuthCAS extends LimeSurvey\PluginManager\AuthPluginBase
 
     public function beforeLogin() 
     {
-			if (!is_null($this->api->getRequest()->getParam('noAuthCAS')) || ($this->api->getRequest()->getIsPostRequest())) {
-				# Local authentication forced through 'noAuthCAS' url parameter
+      if (!is_null($this->api->getRequest()->getParam('noAuthCAS')) || ($this->api->getRequest()->getIsPostRequest())) {
+        # Local authentication forced through 'noAuthCAS' url parameter
         $this->getEvent()->set('default', "Authdb");
       } else {
         // configure phpCAS
@@ -196,7 +196,7 @@ class AuthCAS extends LimeSurvey\PluginManager\AuthPluginBase
             // Fall back to another authentication mecanism
             throw new CHttpException(401, 'Wrong credentials for LimeSurvey administration.');
         }
-			}
+      }
     }
 
     public function newUserSession() 
@@ -350,7 +350,7 @@ class AuthCAS extends LimeSurvey\PluginManager\AuthPluginBase
                     // import phpCAS lib
                     $basedir=dirname(__FILE__); 
                     Yii::setPathOfAlias('myplugin', $basedir);
-										Yii::import('myplugin.third_party.CAS.CAS',true);
+                    Yii::import('myplugin.third_party.CAS.CAS',true);
                     $cas_host = $this->get('casAuthServer');
                     $cas_context = $this->get('casAuthUri');
                     $cas_version = $this->get('casVersion');
@@ -407,7 +407,7 @@ class AuthCAS extends LimeSurvey\PluginManager\AuthPluginBase
         // import phpCAS lib
         $basedir=dirname(__FILE__); 
         Yii::setPathOfAlias('myplugin', $basedir);
-				Yii::import('myplugin.third_party.CAS.CAS',true);
+        Yii::import('myplugin.third_party.CAS.CAS',true);
         // Initialize phpCAS
         phpCAS::client($cas_version, $cas_host, $cas_port, $cas_context, false);
         // disable SSL validation of the CAS server
