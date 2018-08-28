@@ -1,6 +1,6 @@
 <?php
 
-class AuthCAS extends LimeSurvey\PluginManager\AuthPluginBase
+class AuthCAS extends AuthPluginBase
 {
 
     protected $storage = 'DbStorage';
