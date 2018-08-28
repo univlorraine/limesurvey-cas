@@ -328,6 +328,12 @@ class AuthCAS extends LimeSurvey\PluginManager\AuthPluginBase
 
                         // read again user from newly created entry
                         $this->setAuthSuccess($oUser);
+
+						// fire afterAutoCreate event
+						$event = new PluginEvent('afterUserAutoCreate');
+						$event->set('username', $username);
+						App()->getPluginManager()->dispatchEvent($event);
+
                         return;
                     } else 
                     {
@@ -382,6 +388,12 @@ class AuthCAS extends LimeSurvey\PluginManager\AuthPluginBase
                         $permission->setPermissions($oUser->uid, 0, 'global', $this->api->getConfigKey('auth_cas_autocreate_permissions'), true);
                     }
                     $this->setAuthSuccess($oUser);
+
+					// fire afterAutoCreate event
+					$event = new PluginEvent('afterUserAutoCreate');
+					$event->set('username', $oUser->users_name);
+					App()->getPluginManager()->dispatchEvent($event);
+
                     return;
                 } else
                 {
