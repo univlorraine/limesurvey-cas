@@ -229,7 +229,7 @@ class AuthCAS extends AuthPluginBase
                 $ldaptls = $this->get('ldaptls');
                 $ldapoptreferrals = $this->get('ldapoptreferrals');
                 $searchuserattribute = $this->get('searchuserattribute');
-		$userfullnameattr = $this->get('userfullnameattr');
+		$userfullnameattr = $this->get('userfullnameattr',null,null,'displayname');
                 $extrauserfilter = $this->get('extrauserfilter');
                 $usersearchbase = $this->get('usersearchbase');
                 $binddn = $this->get('binddn');
