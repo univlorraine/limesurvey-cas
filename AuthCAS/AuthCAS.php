@@ -79,6 +79,11 @@ class AuthCAS extends AuthPluginBase
             'type' => 'string',
             'label' => 'Attribute to compare to the given login can be uid, cn, mail, ...'
         ),
+        'userfullnameattr' => array(
+            'type' => 'string',
+            'label' => 'Attribute to display the user fullname (displayName, cn, sAMAccountName)',
+            'default' => 'displayName'
+        ),
         'usersearchbase' => array(
             'type' => 'string',
             'label' => 'Base DN for the user search operation'
@@ -141,6 +146,7 @@ class AuthCAS extends AuthPluginBase
                 unset($aPluginSettings['ldapoptreferrals']);
                 unset($aPluginSettings['ldaptls']);
                 unset($aPluginSettings['searchuserattribute']);
+		unset($aPluginSettings['userfullnameattr']);
                 unset($aPluginSettings['usersearchbase']);
                 unset($aPluginSettings['extrauserfilter']);
                 unset($aPluginSettings['binddn']);
@@ -223,6 +229,7 @@ class AuthCAS extends AuthPluginBase
                 $ldaptls = $this->get('ldaptls');
                 $ldapoptreferrals = $this->get('ldapoptreferrals');
                 $searchuserattribute = $this->get('searchuserattribute');
+		$userfullnameattr = $this->get('userfullnameattr',null,null,'displayname');
                 $extrauserfilter = $this->get('extrauserfilter');
                 $usersearchbase = $this->get('usersearchbase');
                 $binddn = $this->get('binddn');
@@ -290,7 +297,7 @@ class AuthCAS extends AuthPluginBase
                     $usersearchfilter = "($searchuserattribute=$username)";
                 }
                 // Search for the user
-                $dnsearchres = ldap_search($ldapconn, $usersearchbase, $usersearchfilter, array($searchuserattribute, "displayname", "mail"));
+                $dnsearchres = ldap_search($ldapconn, $usersearchbase, $usersearchfilter, array($searchuserattribute, $userfullnameattr, "mail"));
                 $rescount = ldap_count_entries($ldapconn, $dnsearchres);
                 if ($rescount == 1) 
                 {
@@ -300,7 +307,7 @@ class AuthCAS extends AuthPluginBase
                     $oUser = new User;
                     $oUser->users_name = $username;
                     $oUser->password = hash('sha256', createPassword());
-                    $oUser->full_name = $userentry[0]["displayname"][0];
+                    $oUser->full_name = $userentry[0][$userfullnameattr][0];
                     $oUser->parent_id = 1;
                     $oUser->email = $userentry[0]["mail"][0];
 
@@ -319,6 +326,7 @@ class AuthCAS extends AuthPluginBase
                            {
                               $oPermission=new Permission;
                               $oPermission->uid = $oUser->uid;
+                              $oPermission->entity_id = 0;
                               $oPermission->entity = 'template';
                               $oPermission->permission = trim($template);
                               $oPermission->read_p = 1;
@@ -338,7 +346,7 @@ class AuthCAS extends AuthPluginBase
                     } else 
                     {
                         $this->setAuthFailure(self::ERROR_USERNAME_INVALID);
-                        throw new CHttpException(401, 'User not saved : ' . $userentry[0]["mail"][0] . " / " . $userentry[0]["displayName"]);
+                        throw new CHttpException(401, 'User not saved : ' . $userentry[0]["mail"][0] . " / " . $userentry[0][$userfullnameattr]);
                         return;
                     }
                 } else 
