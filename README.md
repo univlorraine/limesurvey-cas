@@ -34,3 +34,18 @@ But if you're creating a user in the admin interface, a mail is sent containing 
          'auth_webserver' => true
          ```
 This change indicates to Limesurvey that the authentication is managed by an external system.
+
+## How to store lowercase user IDs in the database
+
+When a user connects for the first time, the identifier retrieved by the CAS plugin is stored in the database as the user typed it.
+
+Example: User logged with `JohnDoe`, userId stored in the database will be` JohnDoe`
+
+You can force the identifier to be lowered in the database with the `casUserIdToLowercase` option.
+
+Be careful, if you activate this option, it will probably be necessary to update user identifiers already registered in the database.
+
+Execute this SQL statement :
+```
+UPDATE lime_users SET users_name = LOWER(users_name);
+```
