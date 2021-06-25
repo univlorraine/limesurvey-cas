@@ -28,6 +28,11 @@ class AuthCAS extends AuthPluginBase
             'options' => array("1.0" => "CAS_VERSION_1_0", "2.0" => "CAS_VERSION_2_0", "3.0" => "CAS_VERSION_3_0", "S1" => "SAML_VERSION_1_1"),
             'default' => "2.0",
         ),
+        'casUserIdCaseInsensitive' => array(
+            'type' => 'boolean',
+            'label' => 'Make the user ID case insensitive when logging in (save the user ID in lowercase in the database)',
+            'default' => '0'
+        ),
         'autoCreate' => array(
             'type' => 'select',
             'label' => 'Enable automated creation of user ?',
@@ -190,7 +195,15 @@ class AuthCAS extends AuthPluginBase
         //force CAS authentication
         phpCAS::forceAuthentication();
 
-        $this->setUsername(phpCAS::getUser());
+        // Put the user coming from phpCAS in lowercase (insensitive)
+        $cas_userid_insensitive = phpCAS::getAttribute($this->get('casUserIdCaseInsensitive'));
+        if ($cas_userid_insensitive)
+        {
+            $this->setUsername(strtolower(phpCAS::getUser()));
+        } else
+        {
+            $this->setUsername(phpCAS::getUser());
+        }
         $oUser = $this->api->getUserByName($this->getUserName());
         if ($oUser || ((int) $this->get('autoCreate') > 0) ) 
         {
@@ -234,8 +247,16 @@ class AuthCAS extends AuthPluginBase
                 $usersearchbase = $this->get('usersearchbase');
                 $binddn = $this->get('binddn');
                 $bindpwd = $this->get('bindpwd');
-
-                $username = $sUser;
+                $casuseridcaseinsensitive = $this->get('casUserIdCaseInsensitive');
+                
+                // Put the username coming from phpCAS in lowercase (insensitive)                
+                if ($casuseridcaseinsensitive)
+                {
+                    $username = strtolower($sUser);
+                } else
+                {
+                    $username = $sUser;
+                }
 
                 if (empty($ldapport)) 
                 {
