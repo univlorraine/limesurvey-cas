@@ -28,9 +28,9 @@ class AuthCAS extends AuthPluginBase
             'options' => array("1.0" => "CAS_VERSION_1_0", "2.0" => "CAS_VERSION_2_0", "3.0" => "CAS_VERSION_3_0", "S1" => "SAML_VERSION_1_1"),
             'default' => "2.0",
         ),
-        'casUserIdCaseInsensitive' => array(
+        'casUserIdToLowercase' => array(
             'type' => 'boolean',
-            'label' => 'Make the user ID case insensitive when logging in (save the user ID in lowercase in the database)',
+            'label' => 'Store the user ID in lowercase in the database to avoid issue with case',
             'default' => '0'
         ),
         'autoCreate' => array(
@@ -196,8 +196,8 @@ class AuthCAS extends AuthPluginBase
         phpCAS::forceAuthentication();
 
         // Put the user coming from phpCAS in lowercase (insensitive)
-        $cas_userid_insensitive = phpCAS::getAttribute($this->get('casUserIdCaseInsensitive'));
-        if ($cas_userid_insensitive)
+        $cas_userid_to_lowercase = $this->get('casUserIdToLowercase');
+        if ($cas_userid_to_lowercase)
         {
             $this->setUsername(strtolower(phpCAS::getUser()));
         } else
@@ -247,10 +247,10 @@ class AuthCAS extends AuthPluginBase
                 $usersearchbase = $this->get('usersearchbase');
                 $binddn = $this->get('binddn');
                 $bindpwd = $this->get('bindpwd');
-                $casuseridcaseinsensitive = $this->get('casUserIdCaseInsensitive');
+                $casuseridtolowercase = $this->get('casUserIdToLowercase');
                 
-                // Put the username coming from phpCAS in lowercase (insensitive)                
-                if ($casuseridcaseinsensitive)
+                // Put the username coming from phpCAS in lowercase             
+                if ($casuseridtolowercase)
                 {
                     $username = strtolower($sUser);
                 } else
