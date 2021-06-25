@@ -195,7 +195,7 @@ class AuthCAS extends AuthPluginBase
         //force CAS authentication
         phpCAS::forceAuthentication();
 
-        // Put the user coming from phpCAS in lowercase (insensitive)
+        // Put the user coming from phpCAS in lowercase
         $cas_userid_to_lowercase = $this->get('casUserIdToLowercase');
         if ($cas_userid_to_lowercase)
         {
@@ -390,6 +390,7 @@ class AuthCAS extends AuthPluginBase
                     $cas_context = $this->get('casAuthUri');
                     $cas_version = $this->get('casVersion');
                     $cas_port = (int) $this->get('casAuthPort');
+                    $cas_userid_to_lowercase = $this->get('casUserIdToLowercase');
                     // Initialize phpCAS
                     //phpCAS::client($cas_version, $cas_host, $cas_port, $cas_context, false);
                     // disable SSL validation of the CAS server
@@ -404,6 +405,14 @@ class AuthCAS extends AuthPluginBase
                     return;
                 }
                 $oUser = new User;
+                // Put the user coming from phpCAS in lowercase
+                if ($cas_userid_to_lowercase)
+                {
+                    $oUser->users_name = strtolower(phpCAS::getUser());
+                } else
+                {
+                    $oUser->users_name = phpCAS::getUser();
+                }
                 $oUser->users_name = phpCAS::getUser();
                 $oUser->password = hash('sha256', createPassword());
                 $oUser->full_name = $cas_fullname;
