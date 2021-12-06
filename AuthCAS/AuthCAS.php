@@ -1,5 +1,22 @@
 <?php
-
+/**
+ * CAS Authentication plugin for limesurvey (based on phpCAS)
+ *
+ * @author Guillaume Colson <https://github.com/goyome>
+ * @copyright 2015-2021 Université de Lorraine
+ * @license GPL v2
+ * @version 1.1.0-alpha1
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
 class AuthCAS extends AuthPluginBase
 {
 
@@ -112,6 +129,7 @@ class AuthCAS extends AuthPluginBase
         /**
          * Here you should handle subscribing to the events your plugin will handle
          */
+        require_once __DIR__ . '/vendor/autoload.php';
         $this->subscribe('beforeLogin');
         $this->subscribe('newUserSession');
         $this->subscribe('beforeLogout');
@@ -151,7 +169,7 @@ class AuthCAS extends AuthPluginBase
                 unset($aPluginSettings['ldapoptreferrals']);
                 unset($aPluginSettings['ldaptls']);
                 unset($aPluginSettings['searchuserattribute']);
-		unset($aPluginSettings['userfullnameattr']);
+                unset($aPluginSettings['userfullnameattr']);
                 unset($aPluginSettings['usersearchbase']);
                 unset($aPluginSettings['extrauserfilter']);
                 unset($aPluginSettings['binddn']);
@@ -184,10 +202,7 @@ class AuthCAS extends AuthPluginBase
         $cas_context = $this->get('casAuthUri');
         $cas_port = (int) $this->get('casAuthPort');
         $cas_version = $this->get('casVersion');
-        // import phpCAS lib
-        $basedir=dirname(__FILE__); 
-        Yii::setPathOfAlias('myplugin', $basedir);
-        Yii::import('myplugin.third_party.CAS.CAS',true);
+
         // Initialize phpCAS
         phpCAS::client($cas_version, $cas_host, $cas_port, $cas_context, false);
         // disable SSL validation of the CAS server
@@ -242,7 +257,7 @@ class AuthCAS extends AuthPluginBase
                 $ldaptls = $this->get('ldaptls');
                 $ldapoptreferrals = $this->get('ldapoptreferrals');
                 $searchuserattribute = $this->get('searchuserattribute');
-		$userfullnameattr = $this->get('userfullnameattr',null,null,'displayname');
+                $userfullnameattr = $this->get('userfullnameattr',null,null,'displayname');
                 $extrauserfilter = $this->get('extrauserfilter');
                 $usersearchbase = $this->get('usersearchbase');
                 $binddn = $this->get('binddn');
@@ -358,10 +373,10 @@ class AuthCAS extends AuthPluginBase
                         // read again user from newly created entry
                         $this->setAuthSuccess($oUser);
 
-						// fire afterAutoCreate event
-						$event = new PluginEvent('afterUserAutoCreate');
-						$event->set('username', $username);
-						App()->getPluginManager()->dispatchEvent($event);
+                        // fire afterAutoCreate event
+                        $event = new PluginEvent('afterUserAutoCreate');
+                        $event->set('username', $username);
+                        App()->getPluginManager()->dispatchEvent($event);
 
                         return;
                     } else 
@@ -382,10 +397,6 @@ class AuthCAS extends AuthPluginBase
             } elseif ((int) $this->get('autoCreate') === 2)
             {
                 try {
-                    // import phpCAS lib
-                    $basedir=dirname(__FILE__); 
-                    Yii::setPathOfAlias('myplugin', $basedir);
-                    Yii::import('myplugin.third_party.CAS.CAS',true);
                     $cas_host = $this->get('casAuthServer');
                     $cas_context = $this->get('casAuthUri');
                     $cas_version = $this->get('casVersion');
@@ -427,10 +438,10 @@ class AuthCAS extends AuthPluginBase
                     }
                     $this->setAuthSuccess($oUser);
 
-					// fire afterAutoCreate event
-					$event = new PluginEvent('afterUserAutoCreate');
-					$event->set('username', $oUser->users_name);
-					App()->getPluginManager()->dispatchEvent($event);
+                    // fire afterAutoCreate event
+                    $event = new PluginEvent('afterUserAutoCreate');
+                    $event->set('username', $oUser->users_name);
+                    App()->getPluginManager()->dispatchEvent($event);
 
                     return;
                 } else
@@ -454,10 +465,7 @@ class AuthCAS extends AuthPluginBase
         $cas_context = $this->get('casAuthUri');
         $cas_version = $this->get('casVersion');
         $cas_port = (int) $this->get('casAuthPort');
-        // import phpCAS lib
-        $basedir=dirname(__FILE__); 
-        Yii::setPathOfAlias('myplugin', $basedir);
-        Yii::import('myplugin.third_party.CAS.CAS',true);
+
         // Initialize phpCAS
         phpCAS::client($cas_version, $cas_host, $cas_port, $cas_context, false);
         // disable SSL validation of the CAS server

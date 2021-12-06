@@ -1,0 +1,17 @@
+{
+    "name": "univlorraine/authcas",
+    "description": "CAS Authentication plugin for limesurvey (based on phpCAS).",
+    "type": "limesurvey-plugin",
+    "homepage": "https://github.com/univlorraine/limesurvey-cas",
+    "license": "GPL-2.0-or-later",
+    "authors": [
+        {
+            "name": "Guillaume Colson",
+            "homepage": "https://github.com/goyome"
+        }
+    ],
+    "minimum-stability": "alpha",
+    "require": {
+        "jasig/phpcas": "^1.4"
+    }
+}
