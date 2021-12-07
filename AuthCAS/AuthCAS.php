@@ -5,7 +5,7 @@
  * @author Guillaume Colson <https://github.com/goyome>
  * @copyright 2015-2021 Université de Lorraine
  * @license GPL v2
- * @version 1.1.0-alpha1
+ * @version 1.1.0-alpha2
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -220,10 +220,15 @@ class AuthCAS extends AuthPluginBase
             $this->setUsername(phpCAS::getUser());
         }
         $oUser = $this->api->getUserByName($this->getUserName());
-        if ($oUser || ((int) $this->get('autoCreate') > 0) ) 
+        $authEvent = $this->getEvent();
+        if (
+            ($oUser && Permission::model()->hasGlobalPermission('auth_cas', 'read', $user->uid))
+            || 
+            ((int) $this->get('autoCreate') > 0)
+        ) 
         {
             // User authenticated and found. Cas become the authentication system
-            $this->getEvent()->set('default', get_class($this));
+            $authEvent->set('default', get_class($this));
             $this->setAuthPlugin(); // This plugin handles authentication, halt further execution of auth plugins
         } elseif ($this->get('is_default', null, null)) 
         {
@@ -241,7 +246,7 @@ class AuthCAS extends AuthPluginBase
         {
             return;
         }
-
+        $authEvent = $this->getEvent();
         $sUser = $this->getUserName();
 
         $oUser = $this->api->getUserByName($sUser);
@@ -352,9 +357,10 @@ class AuthCAS extends AuthPluginBase
                     {
                         if ($this->api->getConfigKey('auth_cas_autocreate_permissions'))
                         {
-                           $permission = new Permission;
-                           $permission->setPermissions($oUser->uid, 0, 'global', $this->api->getConfigKey('auth_cas_autocreate_permissions'), true);
+                           Permission::setPermissions($oUser->uid, 0, 'global', $this->api->getConfigKey('auth_cas_autocreate_permissions'), true);
                         }
+                        /* Give connection permission */
+                        Permission::model()->setGlobalPermission($oUser->uid, 'auth_cas');
                         if ($this->api->getConfigKey('auth_cas_template_list'))
                         {
                            // Add permission on the templates defined in the config file
@@ -371,7 +377,7 @@ class AuthCAS extends AuthPluginBase
                         }
 
                         // read again user from newly created entry
-                        $this->setAuthSuccess($oUser);
+                        $this->setAuthSuccess($oUser, $authEvent);
 
                         // fire afterAutoCreate event
                         $event = new PluginEvent('afterUserAutoCreate');
@@ -416,15 +422,10 @@ class AuthCAS extends AuthPluginBase
                     return;
                 }
                 $oUser = new User;
-                // Put the user coming from phpCAS in lowercase
-                if ($cas_userid_to_lowercase)
-                {
-                    $oUser->users_name = strtolower(phpCAS::getUser());
-                } else
-                {
-                    $oUser->users_name = phpCAS::getUser();
-                }
                 $oUser->users_name = phpCAS::getUser();
+                if ($cas_userid_to_lowercase) {
+                    $oUser->users_name = strtolower($oUser->users_name);
+                }
                 $oUser->password = hash('sha256', createPassword());
                 $oUser->full_name = $cas_fullname;
                 $oUser->parent_id = 1;
@@ -433,10 +434,10 @@ class AuthCAS extends AuthPluginBase
                 {
                     if ($this->api->getConfigKey('auth_cas_autocreate_permissions'))
                     {
-                        $permission = new Permission;
-                        $permission->setPermissions($oUser->uid, 0, 'global', $this->api->getConfigKey('auth_cas_autocreate_permissions'), true);
+                        Permission::setPermissions($oUser->uid, 0, 'global', $this->api->getConfigKey('auth_cas_autocreate_permissions'), true);
                     }
-                    $this->setAuthSuccess($oUser);
+                    Permission::model()->setGlobalPermission($oUser->uid, 'auth_cas');
+                    $this->setAuthSuccess($oUser, $authEvent);
 
                     // fire afterAutoCreate event
                     $event = new PluginEvent('afterUserAutoCreate');
@@ -472,6 +473,66 @@ class AuthCAS extends AuthPluginBase
         phpCAS::setNoCasServerValidation();
         // logout from CAS
         phpCAS::logout();
+    }
+    
+    /**
+     * Add AuthCas Permission to global Permission
+     * @return void
+     */
+    public function getGlobalBasePermissions()
+    {
+        $this->getEvent()->append('globalBasePermissions', array(
+            'auth_cas' => array(
+                'create' => false,
+                'update' => false,
+                'delete' => false,
+                'import' => false,
+                'export' => false,
+                'title' => $this->gT("Use CAS authentication"),
+                'description' => $this->gT("Use CAS authentication"),
+                'img' => 'fa fa-user-circle-o'
+            ),
+        ));
+    }
+
+    /**
+     * @inheritoc
+     * Replace to use own event
+     * @return AuthPluginBase
+     */
+    public function setAuthPlugin(LimeSurvey\PluginManager\PluginEvent $event = null)
+    {
+        if (empty($event)) {
+            $event = $this->getEvent();
+        }
+        $identity = $event->get('identity');
+        $identity->plugin = get_class($this);
+        $event->stop();
+
+        return $this;
+    }
+
+    /**
+     * @inheritoc
+     * Replace to use own event
+     * @see https://bugs.limesurvey.org/view.php?id=17654
+     *
+     * @param User $user
+     * @param PluginEvent $event
+     * @return AuthPluginBase
+     */
+    public function setAuthSuccess(User $user, LimeSurvey\PluginManager\PluginEvent $event = null)
+    {
+        if (empty($event)) {
+            $event = $this->getEvent();
+        }
+        $identity = $event->get('identity');
+        $identity->id = $user->uid;
+        $identity->user = $user;
+        $event->set('identity', $identity);
+        $event->set('result', new LSAuthResult(self::ERROR_NONE));
+
+        return $this;
     }
 
 }
