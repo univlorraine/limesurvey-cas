@@ -5,7 +5,7 @@
  * @author Guillaume Colson <https://github.com/goyome>
  * @copyright 2015-2021 Université de Lorraine
  * @license GPL v2
- * @version 1.1.0-beta2
+ * @version 1.1.0-beta3
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -215,6 +215,7 @@ class AuthCAS extends AuthPluginBase
       if (!is_null($this->api->getRequest()->getParam('noAuthCAS')) || ($this->api->getRequest()->getIsPostRequest())) {
         # Local authentication forced through 'noAuthCAS' url parameter
         $this->getEvent()->set('default', "Authdb");
+        return;
       } else {
         // configure phpCAS
         $cas_host = $this->get('casAuthServer');
@@ -250,7 +251,7 @@ class AuthCAS extends AuthPluginBase
         {
             // User authenticated and found. Cas become the authentication system
             $authEvent->set('default', get_class($this));
-            $this->setAuthPlugin(); // This plugin handles authentication, halt further execution of auth plugins
+            $this->setAuthPlugin($authEvent); // This plugin handles authentication, halt further execution of auth plugins
         } elseif ($this->get('is_default', null, null)) 
         {
             // Fall back to another authentication mecanism
@@ -474,7 +475,7 @@ class AuthCAS extends AuthPluginBase
             }
         } else 
         {
-            $this->setAuthSuccess($oUser);
+            $this->setAuthSuccess($oUser, $authEvent);
             return;
         }
     }
@@ -564,7 +565,7 @@ class AuthCAS extends AuthPluginBase
      */
     private function checkLoginCasPermission($userid)
     {
-        if (Permission::model()->hasGlobalPermission('auth_cas', 'read', $$userid)) {
+        if (Permission::model()->hasGlobalPermission('auth_cas', 'read', $userid)) {
             return true;
         }
         $oPermission = Permission::model()->find(
