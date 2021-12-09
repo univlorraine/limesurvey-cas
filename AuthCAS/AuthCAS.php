@@ -5,7 +5,7 @@
  * @author Guillaume Colson <https://github.com/goyome>
  * @copyright 2015-2021 Université de Lorraine
  * @license GPL v2
- * @version 1.1.0-alpha2
+ * @version 1.1.0-beta1
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -133,6 +133,25 @@ class AuthCAS extends AuthPluginBase
         $this->subscribe('beforeLogin');
         $this->subscribe('newUserSession');
         $this->subscribe('beforeLogout');
+        /* check if needed function is available */
+        $this->subscribe('beforeActivate');
+        /* Global auth option */
+        $this->subscribe('getGlobalBasePermissions');
+    }
+
+    /**
+     * Check if plugin can be activated and used
+     */
+    public function beforeActivate()
+    {
+        if (!$this->getEvent()) {
+          throw new CHttpException(403);
+        }
+        if (!function_exists('curl_version')) {
+            $this->getEvent()->set('message', $this->gT("You must activate php curl extension"));
+            $this->getEvent()->set('success', false);
+            return;
+        }
     }
 
     /**
@@ -202,7 +221,9 @@ class AuthCAS extends AuthPluginBase
         $cas_context = $this->get('casAuthUri');
         $cas_port = (int) $this->get('casAuthPort');
         $cas_version = $this->get('casVersion');
-
+        if (empty($cas_host)) {
+            return;
+        }
         // Initialize phpCAS
         phpCAS::client($cas_version, $cas_host, $cas_port, $cas_context, false);
         // disable SSL validation of the CAS server
@@ -222,7 +243,7 @@ class AuthCAS extends AuthPluginBase
         $oUser = $this->api->getUserByName($this->getUserName());
         $authEvent = $this->getEvent();
         if (
-            ($oUser && Permission::model()->hasGlobalPermission('auth_cas', 'read', $user->uid))
+            ($oUser && Permission::model()->hasGlobalPermission('auth_cas', 'read', $oUser->uid))
             || 
             ((int) $this->get('autoCreate') > 0)
         ) 
@@ -242,8 +263,7 @@ class AuthCAS extends AuthPluginBase
     {
         // Do nothing if this user is not AuthCAS type
         $identity = $this->getEvent()->get('identity');
-        if ($identity->plugin != 'AuthCAS') 
-        {
+        if ($identity->plugin != 'AuthCAS')  {
             return;
         }
         $authEvent = $this->getEvent();
