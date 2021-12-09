@@ -5,7 +5,7 @@
  * @author Guillaume Colson <https://github.com/goyome>
  * @copyright 2015-2021 Université de Lorraine
  * @license GPL v2
- * @version 1.1.0-beta1
+ * @version 1.1.0-beta2
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -243,7 +243,7 @@ class AuthCAS extends AuthPluginBase
         $oUser = $this->api->getUserByName($this->getUserName());
         $authEvent = $this->getEvent();
         if (
-            ($oUser && Permission::model()->hasGlobalPermission('auth_cas', 'read', $oUser->uid))
+            ($oUser && $this->checkLoginCasPermission($oUser->uid))
             || 
             ((int) $this->get('autoCreate') > 0)
         ) 
@@ -555,4 +555,28 @@ class AuthCAS extends AuthPluginBase
         return $this;
     }
 
+    /**
+     * Check if have Log in permission
+     * Line is set : read it
+     * Line is not set : can log in
+     * @var integer userid
+     * @return booelan
+     */
+    private function checkLoginCasPermission($userid)
+    {
+        if (Permission::model()->hasGlobalPermission('auth_cas', 'read', $$userid)) {
+            return true;
+        }
+        $oPermission = Permission::model()->find(
+            "entity = 'global' AND uid = :uid AND permission = 'auth_cas'",
+            array( ':uid' => $userid)
+        );
+        if (!empty($oPermission)) {
+            /* Is et to 0 */
+            return false;
+        }
+        /* Set it for next login */
+        Permission::model()->setGlobalPermission($userid, 'auth_cas');
+        return true;
+    }
 }
