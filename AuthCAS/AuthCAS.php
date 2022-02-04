@@ -3,9 +3,10 @@
  * CAS Authentication plugin for limesurvey (based on phpCAS)
  *
  * @author Guillaume Colson <https://github.com/goyome>
- * @copyright 2015-2021 Université de Lorraine
+ * @author Denis Chenu <https://www.sondages.pro>
+ * @copyright 2015-2022 Université de Lorraine
  * @license GPL v2
- * @version 1.1.0-beta3
+ * @version 1.1.0
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
