@@ -1,5 +1,23 @@
 <?php
-
+/**
+ * CAS Authentication plugin for limesurvey (based on phpCAS)
+ *
+ * @author Guillaume Colson <https://github.com/goyome>
+ * @author Denis Chenu <https://www.sondages.pro>
+ * @copyright 2015-2022 Université de Lorraine
+ * @license GPL v2
+ * @version 1.1.0
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
 class AuthCAS extends AuthPluginBase
 {
 
@@ -112,9 +130,29 @@ class AuthCAS extends AuthPluginBase
         /**
          * Here you should handle subscribing to the events your plugin will handle
          */
+        require_once __DIR__ . '/vendor/autoload.php';
         $this->subscribe('beforeLogin');
         $this->subscribe('newUserSession');
         $this->subscribe('beforeLogout');
+        /* check if needed function is available */
+        $this->subscribe('beforeActivate');
+        /* Global auth option */
+        $this->subscribe('getGlobalBasePermissions');
+    }
+
+    /**
+     * Check if plugin can be activated and used
+     */
+    public function beforeActivate()
+    {
+        if (!$this->getEvent()) {
+          throw new CHttpException(403);
+        }
+        if (!function_exists('curl_version')) {
+            $this->getEvent()->set('message', $this->gT("You must activate php curl extension"));
+            $this->getEvent()->set('success', false);
+            return;
+        }
     }
 
     /**
@@ -151,7 +189,7 @@ class AuthCAS extends AuthPluginBase
                 unset($aPluginSettings['ldapoptreferrals']);
                 unset($aPluginSettings['ldaptls']);
                 unset($aPluginSettings['searchuserattribute']);
-		unset($aPluginSettings['userfullnameattr']);
+                unset($aPluginSettings['userfullnameattr']);
                 unset($aPluginSettings['usersearchbase']);
                 unset($aPluginSettings['extrauserfilter']);
                 unset($aPluginSettings['binddn']);
@@ -178,16 +216,16 @@ class AuthCAS extends AuthPluginBase
       if (!is_null($this->api->getRequest()->getParam('noAuthCAS')) || ($this->api->getRequest()->getIsPostRequest())) {
         # Local authentication forced through 'noAuthCAS' url parameter
         $this->getEvent()->set('default', "Authdb");
+        return;
       } else {
         // configure phpCAS
         $cas_host = $this->get('casAuthServer');
         $cas_context = $this->get('casAuthUri');
         $cas_port = (int) $this->get('casAuthPort');
         $cas_version = $this->get('casVersion');
-        // import phpCAS lib
-        $basedir=dirname(__FILE__); 
-        Yii::setPathOfAlias('myplugin', $basedir);
-        Yii::import('myplugin.third_party.CAS.CAS',true);
+        if (empty($cas_host)) {
+            return;
+        }
         // Initialize phpCAS
         phpCAS::client($cas_version, $cas_host, $cas_port, $cas_context, false);
         // disable SSL validation of the CAS server
@@ -205,11 +243,16 @@ class AuthCAS extends AuthPluginBase
             $this->setUsername(phpCAS::getUser());
         }
         $oUser = $this->api->getUserByName($this->getUserName());
-        if ($oUser || ((int) $this->get('autoCreate') > 0) ) 
+        $authEvent = $this->getEvent();
+        if (
+            ($oUser && $this->checkLoginCasPermission($oUser->uid))
+            || 
+            ((int) $this->get('autoCreate') > 0)
+        ) 
         {
             // User authenticated and found. Cas become the authentication system
-            $this->getEvent()->set('default', get_class($this));
-            $this->setAuthPlugin(); // This plugin handles authentication, halt further execution of auth plugins
+            $authEvent->set('default', get_class($this));
+            $this->setAuthPlugin($authEvent); // This plugin handles authentication, halt further execution of auth plugins
         } elseif ($this->get('is_default', null, null)) 
         {
             // Fall back to another authentication mecanism
@@ -222,11 +265,10 @@ class AuthCAS extends AuthPluginBase
     {
         // Do nothing if this user is not AuthCAS type
         $identity = $this->getEvent()->get('identity');
-        if ($identity->plugin != 'AuthCAS') 
-        {
+        if ($identity->plugin != 'AuthCAS')  {
             return;
         }
-
+        $authEvent = $this->getEvent();
         $sUser = $this->getUserName();
 
         $oUser = $this->api->getUserByName($sUser);
@@ -242,7 +284,7 @@ class AuthCAS extends AuthPluginBase
                 $ldaptls = $this->get('ldaptls');
                 $ldapoptreferrals = $this->get('ldapoptreferrals');
                 $searchuserattribute = $this->get('searchuserattribute');
-		$userfullnameattr = $this->get('userfullnameattr',null,null,'displayname');
+                $userfullnameattr = $this->get('userfullnameattr',null,null,'displayname');
                 $extrauserfilter = $this->get('extrauserfilter');
                 $usersearchbase = $this->get('usersearchbase');
                 $binddn = $this->get('binddn');
@@ -337,9 +379,10 @@ class AuthCAS extends AuthPluginBase
                     {
                         if ($this->api->getConfigKey('auth_cas_autocreate_permissions'))
                         {
-                           $permission = new Permission;
-                           $permission->setPermissions($oUser->uid, 0, 'global', $this->api->getConfigKey('auth_cas_autocreate_permissions'), true);
+                           Permission::setPermissions($oUser->uid, 0, 'global', $this->api->getConfigKey('auth_cas_autocreate_permissions'), true);
                         }
+                        /* Give connection permission */
+                        Permission::model()->setGlobalPermission($oUser->uid, 'auth_cas');
                         if ($this->api->getConfigKey('auth_cas_template_list'))
                         {
                            // Add permission on the templates defined in the config file
@@ -356,12 +399,12 @@ class AuthCAS extends AuthPluginBase
                         }
 
                         // read again user from newly created entry
-                        $this->setAuthSuccess($oUser);
+                        $this->setAuthSuccess($oUser, $authEvent);
 
-						// fire afterAutoCreate event
-						$event = new PluginEvent('afterUserAutoCreate');
-						$event->set('username', $username);
-						App()->getPluginManager()->dispatchEvent($event);
+                        // fire afterAutoCreate event
+                        $event = new PluginEvent('afterUserAutoCreate');
+                        $event->set('username', $username);
+                        App()->getPluginManager()->dispatchEvent($event);
 
                         return;
                     } else 
@@ -382,10 +425,6 @@ class AuthCAS extends AuthPluginBase
             } elseif ((int) $this->get('autoCreate') === 2)
             {
                 try {
-                    // import phpCAS lib
-                    $basedir=dirname(__FILE__); 
-                    Yii::setPathOfAlias('myplugin', $basedir);
-                    Yii::import('myplugin.third_party.CAS.CAS',true);
                     $cas_host = $this->get('casAuthServer');
                     $cas_context = $this->get('casAuthUri');
                     $cas_version = $this->get('casVersion');
@@ -405,15 +444,10 @@ class AuthCAS extends AuthPluginBase
                     return;
                 }
                 $oUser = new User;
-                // Put the user coming from phpCAS in lowercase
-                if ($cas_userid_to_lowercase)
-                {
-                    $oUser->users_name = strtolower(phpCAS::getUser());
-                } else
-                {
-                    $oUser->users_name = phpCAS::getUser();
-                }
                 $oUser->users_name = phpCAS::getUser();
+                if ($cas_userid_to_lowercase) {
+                    $oUser->users_name = strtolower($oUser->users_name);
+                }
                 $oUser->password = hash('sha256', createPassword());
                 $oUser->full_name = $cas_fullname;
                 $oUser->parent_id = 1;
@@ -422,15 +456,15 @@ class AuthCAS extends AuthPluginBase
                 {
                     if ($this->api->getConfigKey('auth_cas_autocreate_permissions'))
                     {
-                        $permission = new Permission;
-                        $permission->setPermissions($oUser->uid, 0, 'global', $this->api->getConfigKey('auth_cas_autocreate_permissions'), true);
+                        Permission::setPermissions($oUser->uid, 0, 'global', $this->api->getConfigKey('auth_cas_autocreate_permissions'), true);
                     }
-                    $this->setAuthSuccess($oUser);
+                    Permission::model()->setGlobalPermission($oUser->uid, 'auth_cas');
+                    $this->setAuthSuccess($oUser, $authEvent);
 
-					// fire afterAutoCreate event
-					$event = new PluginEvent('afterUserAutoCreate');
-					$event->set('username', $oUser->users_name);
-					App()->getPluginManager()->dispatchEvent($event);
+                    // fire afterAutoCreate event
+                    $event = new PluginEvent('afterUserAutoCreate');
+                    $event->set('username', $oUser->users_name);
+                    App()->getPluginManager()->dispatchEvent($event);
 
                     return;
                 } else
@@ -442,7 +476,7 @@ class AuthCAS extends AuthPluginBase
             }
         } else 
         {
-            $this->setAuthSuccess($oUser);
+            $this->setAuthSuccess($oUser, $authEvent);
             return;
         }
     }
@@ -454,10 +488,7 @@ class AuthCAS extends AuthPluginBase
         $cas_context = $this->get('casAuthUri');
         $cas_version = $this->get('casVersion');
         $cas_port = (int) $this->get('casAuthPort');
-        // import phpCAS lib
-        $basedir=dirname(__FILE__); 
-        Yii::setPathOfAlias('myplugin', $basedir);
-        Yii::import('myplugin.third_party.CAS.CAS',true);
+
         // Initialize phpCAS
         phpCAS::client($cas_version, $cas_host, $cas_port, $cas_context, false);
         // disable SSL validation of the CAS server
@@ -465,5 +496,89 @@ class AuthCAS extends AuthPluginBase
         // logout from CAS
         phpCAS::logout();
     }
+    
+    /**
+     * Add AuthCas Permission to global Permission
+     * @return void
+     */
+    public function getGlobalBasePermissions()
+    {
+        $this->getEvent()->append('globalBasePermissions', array(
+            'auth_cas' => array(
+                'create' => false,
+                'update' => false,
+                'delete' => false,
+                'import' => false,
+                'export' => false,
+                'title' => $this->gT("Use CAS authentication"),
+                'description' => $this->gT("Use CAS authentication"),
+                'img' => 'fa fa-user-circle-o'
+            ),
+        ));
+    }
 
+    /**
+     * @inheritoc
+     * Replace to use own event
+     * @return AuthPluginBase
+     */
+    public function setAuthPlugin(LimeSurvey\PluginManager\PluginEvent $event = null)
+    {
+        if (empty($event)) {
+            $event = $this->getEvent();
+        }
+        $identity = $event->get('identity');
+        $identity->plugin = get_class($this);
+        $event->stop();
+
+        return $this;
+    }
+
+    /**
+     * @inheritoc
+     * Replace to use own event
+     * @see https://bugs.limesurvey.org/view.php?id=17654
+     *
+     * @param User $user
+     * @param PluginEvent $event
+     * @return AuthPluginBase
+     */
+    public function setAuthSuccess(User $user, LimeSurvey\PluginManager\PluginEvent $event = null)
+    {
+        if (empty($event)) {
+            $event = $this->getEvent();
+        }
+        $identity = $event->get('identity');
+        $identity->id = $user->uid;
+        $identity->user = $user;
+        $event->set('identity', $identity);
+        $event->set('result', new LSAuthResult(self::ERROR_NONE));
+
+        return $this;
+    }
+
+    /**
+     * Check if have Log in permission
+     * Line is set : read it
+     * Line is not set : can log in
+     * @var integer userid
+     * @return booelan
+     */
+    private function checkLoginCasPermission($userid)
+    {
+        if (Permission::model()->hasGlobalPermission('auth_cas', 'read', $userid)) {
+            return true;
+        }
+        $oPermission = Permission::model()->find(
+            "entity = 'global' AND uid = :uid AND permission = 'auth_cas'",
+            array( ':uid' => $userid)
+        );
+        if (!empty($oPermission)) {
+            /* Is et to 0 */
+            return false;
+        }
+        /* Set it for next login */
+        Permission::model()->setGlobalPermission($userid, 'auth_cas');
+        return true;
+    }
 }
