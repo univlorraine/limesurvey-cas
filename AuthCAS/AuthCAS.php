@@ -122,6 +122,12 @@ class AuthCAS extends AuthPluginBase
         'bindpwd' => array(
             'type' => 'string',
             'label' => 'Password of the LDAP account used to search for the end-user\'s DN if previoulsy set.'
+        ),
+        'defaultRole' => array(
+            'type' => 'select',
+            'label' => "Default role for new user",
+            'options' => [],
+            'default' => [''],
         )
     );
 
@@ -138,6 +144,24 @@ class AuthCAS extends AuthPluginBase
         $this->subscribe('beforeActivate');
         /* Global auth option */
         $this->subscribe('getGlobalBasePermissions');
+
+        // Load available roles from the database (table:lime_permissiontemplates)
+        $roles = Yii::app()->db->createCommand()
+            ->selectDistinct(['ptid', 'name'])
+            ->from('lime_permissiontemplates')
+            ->queryAll();
+
+        $roleOptions = [];
+
+        // Add a first field in roleOptions
+        $roleOptions['default'] = 'Pick a role';
+
+        foreach ($roles as $role) {
+            $roleOptions[$role['ptid']] = $role['name'];
+        }
+
+        $this->settings['defaultRole']['options'] = $roleOptions;
+
     }
 
     /**
@@ -381,6 +405,12 @@ class AuthCAS extends AuthPluginBase
                         {
                            Permission::setPermissions($oUser->uid, 0, 'global', $this->api->getConfigKey('auth_cas_autocreate_permissions'), true);
                         }
+
+                        // ADD a default role
+                        $defaultRole = $this->get('defaultRole', null, null, []);
+                        if($defaultRole !== 'default')
+                        Permissiontemplates::model()->applyToUser($oUser->uid, $defaultRole);
+
                         /* Give connection permission */
                         Permission::model()->setGlobalPermission($oUser->uid, 'auth_cas');
                         if ($this->api->getConfigKey('auth_cas_template_list'))
@@ -459,6 +489,13 @@ class AuthCAS extends AuthPluginBase
                         Permission::setPermissions($oUser->uid, 0, 'global', $this->api->getConfigKey('auth_cas_autocreate_permissions'), true);
                     }
                     Permission::model()->setGlobalPermission($oUser->uid, 'auth_cas');
+
+                    // ADD a default role
+                    $defaultRole = $this->get('defaultRole', null, null, []);
+                    if($defaultRole !== 'default')
+                    Permissiontemplates::model()->applyToUser($oUser->uid, $defaultRole);
+
+
                     $this->setAuthSuccess($oUser, $authEvent);
 
                     // fire afterAutoCreate event
