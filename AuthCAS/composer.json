@@ -12,6 +12,6 @@
     ],
     "minimum-stability": "alpha",
     "require": {
-        "jasig/phpcas": "^1.4"
+        "apereo/phpcas": "^1.6"
     }
 }

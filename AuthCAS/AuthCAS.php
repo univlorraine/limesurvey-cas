@@ -227,7 +227,8 @@ class AuthCAS extends AuthPluginBase
             return;
         }
         // Initialize phpCAS
-        phpCAS::client($cas_version, $cas_host, $cas_port, $cas_context, false);
+        $service_name = str_replace('/index.php', '', App()->getController()->createAbsoluteUrl(''));
+        phpCAS::client($cas_version, $cas_host, $cas_port, $cas_context, $service_name, false);
         // disable SSL validation of the CAS server
         phpCAS::setNoCasServerValidation();
         //force CAS authentication
@@ -306,7 +307,7 @@ class AuthCAS extends AuthPluginBase
                 }
 
                 // Try to connect
-                $ldapconn = ldap_connect($ldapserver, (int) $ldapport);
+                $ldapconn = ldap_connect($ldapserver.":".(int) $ldapport);
                 if (false == $ldapconn) 
                 {
                     $this->setAuthFailure(1, gT('Could not connect to LDAP server.'));
@@ -490,7 +491,8 @@ class AuthCAS extends AuthPluginBase
         $cas_port = (int) $this->get('casAuthPort');
 
         // Initialize phpCAS
-        phpCAS::client($cas_version, $cas_host, $cas_port, $cas_context, false);
+        $service_name = str_replace('/index.php', '', App()->getController()->createAbsoluteUrl(''));
+        phpCAS::client($cas_version, $cas_host, $cas_port, $cas_context, $service_name, false);
         // disable SSL validation of the CAS server
         phpCAS::setNoCasServerValidation();
         // logout from CAS

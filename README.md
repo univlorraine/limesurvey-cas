@@ -1,11 +1,11 @@
 # limesurvey-cas
 CAS Authentication plugin for limesurvey (based on phpCAS)
 This version of the plugin works with limesurvey 2.6 and above (except 2.6.3)
-Check the release v2.0 to get the version for Limesurvey 2.x
+Each tag's version matches the version of Limesurvey
 
 This plugin allows you to force CAS authentication to access the admin interface of Limesurvey.
 It also allows you to optionnally create users after the first authentication using LDAP or CAS attributes.
-If this plugin is activated, you can force local authentication (e.g. to connect as admin) by using the url : ls_url/index.php/admin/authentication/sa/login?noAuthCAS=true
+When this plugin is activated, you can force local authentication (e.g. to connect as admin) by using the url : ls_url/index.php/admin/authentication/sa/login?noAuthCAS=true
 
 ## How to install and configure limesurvey-cas
 
