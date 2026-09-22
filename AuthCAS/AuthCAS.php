@@ -227,11 +227,8 @@ class AuthCAS extends AuthPluginBase
             return;
         }
         // Initialize phpCAS
-        if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on') {
-            $service_name = 'https://' . $_SERVER['SERVER_NAME'];
-        } else {
-            $service_name = 'http://' . $_SERVER['SERVER_NAME'];
-        }
+        $parsed_url = parse_url(App()->getController()->createAbsoluteUrl(''));
+        $service_name = $parsed_url['scheme']."://".$parsed_url["host"];
         phpCAS::client($cas_version, $cas_host, $cas_port, $cas_context, $service_name, false);
         // disable SSL validation of the CAS server
         phpCAS::setNoCasServerValidation();
@@ -495,11 +492,8 @@ class AuthCAS extends AuthPluginBase
         $cas_port = (int) $this->get('casAuthPort');
 
         // Initialize phpCAS
-        if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on') {
-            $service_name = 'https://' . $_SERVER['SERVER_NAME'];
-        } else {
-            $service_name = 'http://' . $_SERVER['SERVER_NAME'];
-        }
+        $parsed_url = parse_url(App()->getController()->createAbsoluteUrl(''));
+        $service_name = $parsed_url['scheme']."://".$parsed_url["host"];
         phpCAS::client($cas_version, $cas_host, $cas_port, $cas_context, $service_name, false);
         // disable SSL validation of the CAS server
         phpCAS::setNoCasServerValidation();
