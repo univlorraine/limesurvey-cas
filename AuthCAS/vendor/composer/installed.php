@@ -1,42 +1,41 @@
-<?php return array (
-  'root' => 
-  array (
-    'pretty_version' => 'dev-master',
-    'version' => 'dev-master',
-    'aliases' => 
-    array (
+<?php return array(
+    'root' => array(
+        'name' => 'univlorraine/authcas',
+        'pretty_version' => 'dev-master',
+        'version' => 'dev-master',
+        'reference' => '436d95d65a7b1c08019014d64e97b216481d0c85',
+        'type' => 'limesurvey-plugin',
+        'install_path' => __DIR__ . '/../../',
+        'aliases' => array(),
+        'dev' => false,
     ),
-    'reference' => 'a028a19bd70763c0859a93d5affef852eda262ed',
-    'name' => 'univlorraine/authcas',
-  ),
-  'versions' => 
-  array (
-    'jasig/phpcas' => 
-    array (
-      'pretty_version' => '1.4.0',
-      'version' => '1.4.0.0',
-      'aliases' => 
-      array (
-      ),
-      'reference' => 'ea27d122c4c7114006b33d15668c90f1904d53df',
+    'versions' => array(
+        'apereo/phpcas' => array(
+            'pretty_version' => '1.6.2',
+            'version' => '1.6.2.0',
+            'reference' => 'b413d2981947fd4f97079f715e0571d0c8f2a2c5',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../apereo/phpcas',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+        'psr/log' => array(
+            'pretty_version' => '1.1.4',
+            'version' => '1.1.4.0',
+            'reference' => 'd49695b909c3b7628b6289db5479a1c204601f11',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../psr/log',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+        'univlorraine/authcas' => array(
+            'pretty_version' => 'dev-master',
+            'version' => 'dev-master',
+            'reference' => '436d95d65a7b1c08019014d64e97b216481d0c85',
+            'type' => 'limesurvey-plugin',
+            'install_path' => __DIR__ . '/../../',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
     ),
-    'psr/log' => 
-    array (
-      'pretty_version' => '1.1.4',
-      'version' => '1.1.4.0',
-      'aliases' => 
-      array (
-      ),
-      'reference' => 'd49695b909c3b7628b6289db5479a1c204601f11',
-    ),
-    'univlorraine/authcas' => 
-    array (
-      'pretty_version' => 'dev-master',
-      'version' => 'dev-master',
-      'aliases' => 
-      array (
-      ),
-      'reference' => 'a028a19bd70763c0859a93d5affef852eda262ed',
-    ),
-  ),
 );

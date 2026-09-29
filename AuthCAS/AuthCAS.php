@@ -6,7 +6,7 @@
  * @author Denis Chenu <https://www.sondages.pro>
  * @copyright 2015-2022 Université de Lorraine
  * @license GPL v2
- * @version 1.1.0
+ * @version 7.0.0
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -45,6 +45,21 @@ class AuthCAS extends AuthPluginBase
             'label' => 'protocol version',
             'options' => array("1.0" => "CAS_VERSION_1_0", "2.0" => "CAS_VERSION_2_0", "3.0" => "CAS_VERSION_3_0", "S1" => "SAML_VERSION_1_1"),
             'default' => "2.0",
+        ),
+        'serviceBaseUrl' => array(
+            'type' => 'string',
+            'label' => 'Base URL of this LimeSurvey instance (e.g. https://survey.example.org). Required: prevents CAS ticket theft through a forged Host header',
+            'default' => '',
+        ),
+        'casCACert' => array(
+            'type' => 'string',
+            'label' => 'Path to the CA certificate (bundle) used to validate the CAS server certificate (e.g. /etc/ssl/certs/ca-certificates.crt). Required',
+            'default' => '',
+        ),
+        'autoGrantCasPermission' => array(
+            'type' => 'boolean',
+            'label' => 'Automatically grant the "Use CAS authentication" permission to existing (non superadmin) users without explicit setting. Not recommended: a CAS user with the same login as a local account gets access to that account',
+            'default' => '0',
         ),
         'casUserIdToLowercase' => array(
             'type' => 'boolean',
@@ -85,7 +100,7 @@ class AuthCAS extends AuthPluginBase
             'type' => 'select',
             'label' => 'LDAP version',
             'options' => array('2' => 'LDAPv2', '3' => 'LDAPv3'),
-            'default' => '2',
+            'default' => '3',
             'submitonchange' => true
         ),
         'ldapoptreferrals' => array(
@@ -96,7 +111,7 @@ class AuthCAS extends AuthPluginBase
         'ldaptls' => array(
             'type' => 'boolean',
             'label' => 'Check to enable Start-TLS encryption When using LDAPv3',
-            'default' => '0'
+            'default' => '1'
         ),
         'searchuserattribute' => array(
             'type' => 'string',
@@ -120,7 +135,7 @@ class AuthCAS extends AuthPluginBase
             'label' => 'Optional DN of the LDAP account used to search for the end-user\'s DN. An anonymous bind is performed if empty.'
         ),
         'bindpwd' => array(
-            'type' => 'string',
+            'type' => 'password',
             'label' => 'Password of the LDAP account used to search for the end-user\'s DN if previoulsy set.'
         )
     );
@@ -219,17 +234,9 @@ class AuthCAS extends AuthPluginBase
         return;
       } else {
         // configure phpCAS
-        $cas_host = $this->get('casAuthServer');
-        $cas_context = $this->get('casAuthUri');
-        $cas_port = (int) $this->get('casAuthPort');
-        $cas_version = $this->get('casVersion');
-        if (empty($cas_host)) {
+        if (!$this->initCasClient()) {
             return;
         }
-        // Initialize phpCAS
-        phpCAS::client($cas_version, $cas_host, $cas_port, $cas_context, false);
-        // disable SSL validation of the CAS server
-        phpCAS::setNoCasServerValidation();
         //force CAS authentication
         phpCAS::forceAuthentication();
 
@@ -244,11 +251,13 @@ class AuthCAS extends AuthPluginBase
         }
         $oUser = $this->api->getUserByName($this->getUserName());
         $authEvent = $this->getEvent();
-        if (
-            ($oUser && $this->checkLoginCasPermission($oUser->uid))
-            || 
-            ((int) $this->get('autoCreate') > 0)
-        ) 
+        if ($oUser) {
+            // Existing user: CAS login is allowed only with the auth_cas permission, even if autoCreate is set
+            $allowed = $this->checkLoginCasPermission($oUser->uid);
+        } else {
+            $allowed = ((int) $this->get('autoCreate') > 0);
+        }
+        if ($allowed)
         {
             // User authenticated and found. Cas become the authentication system
             $authEvent->set('default', get_class($this));
@@ -272,7 +281,12 @@ class AuthCAS extends AuthPluginBase
         $sUser = $this->getUserName();
 
         $oUser = $this->api->getUserByName($sUser);
-        if (is_null($oUser)) 
+        if ($oUser && !$this->checkLoginCasPermission($oUser->uid)) {
+            $this->log('CAS login refused for "' . $sUser . '": no auth_cas permission', CLogger::LEVEL_WARNING);
+            $this->setAuthFailure(self::ERROR_USERNAME_INVALID);
+            return;
+        }
+        if (is_null($oUser))
         {
             if ((int) $this->get('autoCreate') === 1) 
             {
@@ -351,28 +365,30 @@ class AuthCAS extends AuthPluginBase
                     ldap_close($ldapconn); // all done? close connection
                     return;
                 }
-                // Now prepare the search filter
-                if ($extrauserfilter != "") 
+                // Now prepare the search filter (escape the username to prevent LDAP injection)
+                $escapedusername = ldap_escape($username, '', LDAP_ESCAPE_FILTER);
+                if ($extrauserfilter != "")
                 {
-                    $usersearchfilter = "(&($searchuserattribute=$username)$extrauserfilter)";
-                } else 
+                    $usersearchfilter = "(&($searchuserattribute=$escapedusername)$extrauserfilter)";
+                } else
                 {
-                    $usersearchfilter = "($searchuserattribute=$username)";
+                    $usersearchfilter = "($searchuserattribute=$escapedusername)";
                 }
                 // Search for the user
-                $dnsearchres = ldap_search($ldapconn, $usersearchbase, $usersearchfilter, array($searchuserattribute, $userfullnameattr, "mail"));
-                $rescount = ldap_count_entries($ldapconn, $dnsearchres);
-                if ($rescount == 1) 
+                $dnsearchres = @ldap_search($ldapconn, $usersearchbase, $usersearchfilter, array($searchuserattribute, $userfullnameattr, "mail"));
+                $rescount = $dnsearchres ? ldap_count_entries($ldapconn, $dnsearchres) : 0;
+                if ($rescount == 1)
                 {
                     $userentry = ldap_get_entries($ldapconn, $dnsearchres);
-                    $userdn = $userentry[0]["dn"];
+                    // ldap_get_entries returns lowercase attribute names
+                    $fullnamekey = strtolower($userfullnameattr);
 
                     $oUser = new User;
                     $oUser->users_name = $username;
-                    $oUser->password = hash('sha256', createPassword());
-                    $oUser->full_name = $userentry[0][$userfullnameattr][0];
+                    $this->setRandomPassword($oUser);
+                    $oUser->full_name = isset($userentry[0][$fullnamekey][0]) ? $userentry[0][$fullnamekey][0] : '';
                     $oUser->parent_id = 1;
-                    $oUser->email = $userentry[0]["mail"][0];
+                    $oUser->email = isset($userentry[0]["mail"][0]) ? $userentry[0]["mail"][0] : '';
 
 
                     if ($oUser->save()) 
@@ -409,49 +425,42 @@ class AuthCAS extends AuthPluginBase
                         return;
                     } else 
                     {
+                        ldap_close($ldapconn);
+                        $this->log('CAS/LDAP auto-creation: unable to save user "' . $username . '": ' . json_encode($oUser->getErrors()), CLogger::LEVEL_ERROR);
                         $this->setAuthFailure(self::ERROR_USERNAME_INVALID);
-                        throw new CHttpException(401, 'User not saved : ' . $userentry[0]["mail"][0] . " / " . $userentry[0][$userfullnameattr]);
-                        return;
+                        throw new CHttpException(401, 'Authentication failed.');
                     }
                 } else 
                 {
                     // if no entry or more than one entry returned
                     // then deny authentication
-                    $this->setAuthFailure(100, ldap_error($ldapconn));
+                    $this->log('CAS/LDAP auto-creation: ' . $rescount . ' LDAP entries found for "' . $username . '" (' . ldap_error($ldapconn) . ')', CLogger::LEVEL_WARNING);
+                    $this->setAuthFailure(self::ERROR_USERNAME_INVALID);
                     ldap_close($ldapconn); // all done? close connection
-                    throw new CHttpException(401, 'No authorized user found for login "' . $username . '"');
-                    return;
+                    throw new CHttpException(401, 'Authentication failed.');
                 }
             } elseif ((int) $this->get('autoCreate') === 2)
             {
+                $cas_userid_to_lowercase = $this->get('casUserIdToLowercase');
                 try {
-                    $cas_host = $this->get('casAuthServer');
-                    $cas_context = $this->get('casAuthUri');
-                    $cas_version = $this->get('casVersion');
-                    $cas_port = (int) $this->get('casAuthPort');
-                    $cas_userid_to_lowercase = $this->get('casUserIdToLowercase');
-                    // Initialize phpCAS
-                    //phpCAS::client($cas_version, $cas_host, $cas_port, $cas_context, false);
-                    // disable SSL validation of the CAS server
-                    //phpCAS::setNoCasServerValidation();
+                    // phpCAS client is already initialized and authenticated in beforeLogin
                     $cas_fullname = phpCAS::getAttribute($this->get('casFullnameAttr'));
-                    $cas_login = phpCAS::getAttribute($this->get('casLoginAttr'));
                     $cas_mail = phpCAS::getAttribute($this->get('casMailAttr'));
                 } catch (Exception $e)
                 {
+                    $this->log('CAS auto-creation: attributes not found for "' . $sUser . '": ' . $e->getMessage(), CLogger::LEVEL_ERROR);
                     $this->setAuthFailure(self::ERROR_USERNAME_INVALID);
-                    throw new CHttpException(401, 'Cas attributes not found for "' . $username . '"');
-                    return;
+                    throw new CHttpException(401, 'Authentication failed.');
                 }
                 $oUser = new User;
                 $oUser->users_name = phpCAS::getUser();
                 if ($cas_userid_to_lowercase) {
                     $oUser->users_name = strtolower($oUser->users_name);
                 }
-                $oUser->password = hash('sha256', createPassword());
-                $oUser->full_name = $cas_fullname;
+                $this->setRandomPassword($oUser);
+                $oUser->full_name = is_array($cas_fullname) ? reset($cas_fullname) : (string) $cas_fullname;
                 $oUser->parent_id = 1;
-                $oUser->email = $cas_mail;
+                $oUser->email = is_array($cas_mail) ? reset($cas_mail) : (string) $cas_mail;
                 if ($oUser->save())
                 {
                     if ($this->api->getConfigKey('auth_cas_autocreate_permissions'))
@@ -469,9 +478,9 @@ class AuthCAS extends AuthPluginBase
                     return;
                 } else
                 {
+                    $this->log('CAS auto-creation: unable to save user "' . $sUser . '": ' . json_encode($oUser->getErrors()), CLogger::LEVEL_ERROR);
                     $this->setAuthFailure(self::ERROR_USERNAME_INVALID);
-                    throw new CHttpException(401, 'User not saved : ' . $sUser .' / ' . $cas_mail . ' / ' . $cas_fullname);
-                    return;
+                    throw new CHttpException(401, 'Authentication failed.');
                 }
             }
         } else 
@@ -484,19 +493,65 @@ class AuthCAS extends AuthPluginBase
     public function beforeLogout() 
     {
         // configure phpCAS
-        $cas_host = $this->get('casAuthServer');
-        $cas_context = $this->get('casAuthUri');
-        $cas_version = $this->get('casVersion');
-        $cas_port = (int) $this->get('casAuthPort');
-
-        // Initialize phpCAS
-        phpCAS::client($cas_version, $cas_host, $cas_port, $cas_context, false);
-        // disable SSL validation of the CAS server
-        phpCAS::setNoCasServerValidation();
+        if (!$this->initCasClient()) {
+            return;
+        }
         // logout from CAS
         phpCAS::logout();
     }
-    
+
+    /**
+     * Initialize the phpCAS client with a fixed service URL and a validated CAS server certificate
+     * @return boolean true if the client is ready to be used
+     */
+    private function initCasClient()
+    {
+        if (phpCAS::isInitialized()) {
+            return true;
+        }
+        $cas_host = $this->get('casAuthServer');
+        $service_base_url = trim((string) $this->get('serviceBaseUrl'));
+        $ca_cert = trim((string) $this->get('casCACert'));
+        if (empty($cas_host)) {
+            return false;
+        }
+        if (!preg_match('#^https?://[^/?\#]+#i', $service_base_url)) {
+            $this->log('CAS authentication disabled: "serviceBaseUrl" setting is missing or invalid', CLogger::LEVEL_ERROR);
+            return false;
+        }
+        if (empty($ca_cert) || !is_readable($ca_cert)) {
+            $this->log('CAS authentication disabled: "casCACert" setting is missing or the file is not readable', CLogger::LEVEL_ERROR);
+            return false;
+        }
+        // Initialize phpCAS (service_base_url avoids building the service URL from the Host header : CVE-2022-39369)
+        phpCAS::client(
+            $this->get('casVersion'),
+            $cas_host,
+            (int) $this->get('casAuthPort'),
+            $this->get('casAuthUri'),
+            $service_base_url,
+            false
+        );
+        // validate the SSL certificate of the CAS server
+        phpCAS::setCasServerCACert($ca_cert, true);
+        return true;
+    }
+
+    /**
+     * Set a random password on a newly created user (never communicated: authentication is done by CAS)
+     * @param User $oUser
+     * @return void
+     */
+    private function setRandomPassword($oUser)
+    {
+        $sPassword = function_exists('random_bytes') ? bin2hex(random_bytes(32)) : createPassword();
+        if (method_exists($oUser, 'setPassword')) {
+            $oUser->setPassword($sPassword);
+        } else {
+            $oUser->password = hash('sha256', $sPassword);
+        }
+    }
+
     /**
      * Add AuthCas Permission to global Permission
      * @return void
@@ -560,21 +615,24 @@ class AuthCAS extends AuthPluginBase
     /**
      * Check if have Log in permission
      * Line is set : read it
-     * Line is not set : can log in
+     * Line is not set : refused, unless autoGrantCasPermission is enabled and the user is not a superadmin
+     * The superadmin implicit rights are not used : a superadmin needs an explicit auth_cas permission.
      * @var integer userid
-     * @return booelan
+     * @return boolean
      */
     private function checkLoginCasPermission($userid)
     {
-        if (Permission::model()->hasGlobalPermission('auth_cas', 'read', $userid)) {
-            return true;
-        }
         $oPermission = Permission::model()->find(
-            "entity = 'global' AND uid = :uid AND permission = 'auth_cas'",
+            "entity = 'global' AND entity_id = 0 AND uid = :uid AND permission = 'auth_cas'",
             array( ':uid' => $userid)
         );
         if (!empty($oPermission)) {
-            /* Is et to 0 */
+            return (bool) $oPermission->read_p;
+        }
+        if (!$this->get('autoGrantCasPermission')) {
+            return false;
+        }
+        if (Permission::model()->hasGlobalPermission('superadmin', 'read', $userid)) {
             return false;
         }
         /* Set it for next login */

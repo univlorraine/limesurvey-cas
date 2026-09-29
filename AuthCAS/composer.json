@@ -10,8 +10,13 @@
             "homepage": "https://github.com/goyome"
         }
     ],
-    "minimum-stability": "alpha",
     "require": {
-        "jasig/phpcas": "^1.4"
+        "php": ">=7.1",
+        "apereo/phpcas": "^1.6.1"
+    },
+    "config": {
+        "platform": {
+            "php": "7.1.0"
+        }
     }
 }

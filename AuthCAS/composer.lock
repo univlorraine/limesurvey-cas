@@ -4,30 +4,32 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "2669a8ef44440733d5a7e0aa17dc0a37",
+    "content-hash": "19d16325a3e51d6de2ce90b5704bba99",
     "packages": [
         {
-            "name": "jasig/phpcas",
-            "version": "1.4.0",
+            "name": "apereo/phpcas",
+            "version": "1.6.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/apereo/phpCAS.git",
-                "reference": "ea27d122c4c7114006b33d15668c90f1904d53df"
+                "reference": "b413d2981947fd4f97079f715e0571d0c8f2a2c5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/apereo/phpCAS/zipball/ea27d122c4c7114006b33d15668c90f1904d53df",
-                "reference": "ea27d122c4c7114006b33d15668c90f1904d53df",
+                "url": "https://api.github.com/repos/apereo/phpCAS/zipball/b413d2981947fd4f97079f715e0571d0c8f2a2c5",
+                "reference": "b413d2981947fd4f97079f715e0571d0c8f2a2c5",
                 "shasum": ""
             },
             "require": {
                 "ext-curl": "*",
-                "php": ">=7.0.0",
-                "psr/log": "^1.0.0"
+                "ext-dom": "*",
+                "php": ">=7.1.0",
+                "psr/log": "^1.0 || ^2.0 || ^3.0"
             },
             "require-dev": {
-                "monolog/monolog": "^1.0.0",
-                "phpunit/phpunit": ">=4.8.35 <8"
+                "monolog/monolog": "^1.0.0 || ^2.0.0",
+                "phpstan/phpstan": "^1.5",
+                "phpunit/phpunit": ">=7.5"
             },
             "type": "library",
             "extra": {
@@ -36,6 +38,9 @@
                 }
             },
             "autoload": {
+                "files": [
+                    "source/CAS.php"
+                ],
                 "classmap": [
                     "source/"
                 ]
@@ -68,9 +73,9 @@
             ],
             "support": {
                 "issues": "https://github.com/apereo/phpCAS/issues",
-                "source": "https://github.com/apereo/phpCAS/tree/1.4.0"
+                "source": "https://github.com/apereo/phpCAS/tree/1.6.2"
             },
-            "time": "2021-05-30T19:53:34+00:00"
+            "time": "2026-04-22T09:20:37+00:00"
         },
         {
             "name": "psr/log",
@@ -125,11 +130,16 @@
     ],
     "packages-dev": [],
     "aliases": [],
-    "minimum-stability": "alpha",
-    "stability-flags": [],
+    "minimum-stability": "stable",
+    "stability-flags": {},
     "prefer-stable": false,
     "prefer-lowest": false,
-    "platform": [],
-    "platform-dev": [],
-    "plugin-api-version": "2.0.0"
+    "platform": {
+        "php": ">=7.1"
+    },
+    "platform-dev": {},
+    "platform-overrides": {
+        "php": "7.1.0"
+    },
+    "plugin-api-version": "2.6.0"
 }
